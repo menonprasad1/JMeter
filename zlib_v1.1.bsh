@@ -1,0 +1,88 @@
+import java.util.Date;
+import java.util.zip.*;
+import java.io.*;
+
+try{
+	///Create a Dynamic file name
+	String threadName = vars.getThreadName() + ".txt";
+	vars.put("filePath",threadName);
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	
+	///Get the current epoch this can be replaced with the <REPLACE> string in the JSON Logs
+	///TODO : Make this more dynamic so that we can accept input from the user about the time the script is to be run for
+	Date datetime = new java.util.Date(); 
+	long epoch = datetime.getTime()/1000L; //Dividing here coz, the getTime returns epoch in ms, the consumer expects this in seconds.
+	vars.put("epochTime",epoch.toString());
+	getEpoch = vars.get("epochTime");
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	///Read the JSON LOG file into a StringBuffer so that it can be replaced with the epoch time and then later zlib compressed
+	File fname = new File(new String(bsh.args[0]));
+	FileReader infile = new FileReader(fname);
+	BufferedReader in = new BufferedReader(infile);
+	StringBuffer stringBuffer = new StringBuffer();
+	while((line =in.readLine())!=null)
+	{
+		stringBuffer.append(line.replace("<REPLACE>",String.valueOf(epoch))).append("\n");
+		//stringBuffer.append(line).append("\n");
+	}
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	/////Write the replaced string to a file for JSON validation
+	FileOutputStream fos = new FileOutputStream("orig.txt");
+	fos.write(String.valueOf(stringBuffer).getBytes());
+	fos.close();
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	
+	
+	///The stringBuffer now contains the string that we want to compress.
+	///Deflate (Compress) this string here
+	///By the end of this block the byte[] output will contain the compresses string	
+	///compressedDataLength will be the amount of data that is compressed, this will be used when dumping the output byte[] into a file
+	byte[] output = new byte[String.valueOf(stringBuffer).length()];
+	Deflater compresser = new Deflater();
+	compresser.setInput(String.valueOf(stringBuffer).getBytes());
+	compresser.finish();
+	int compressedDataLength = compresser.deflate(output);
+	compresser.end();
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	///Dump the compressed string held in bytep[] output into a file
+	///Observred that when the byte[] outpue is converted into a string, put into a variable and then sent in post data, it is corrupted
+	FileOutputStream fos = new FileOutputStream(threadName);
+	fos.write(Arrays.copyOfRange(output,0,compressedDataLength));
+	fos.close();
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	///The compressed byte array is getting corrupted when assigning to a variable
+	///I think it is the string conversion which is causeing the issue here, When dumping to a file and using as above it works fine.
+	///The data variable should be present and it should be in the post data instead of the file.
+	vars.put("data",new String(Arrays.copyOfRange(output,0,compressedDataLength)));
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	
+	//For debug purposes put all the println here
+	System.out.println("The current Epoch is : " + getEpoch);
+	System.out.println("The current file name is : " + threadName);
+	//System.out.println("The data assigned to the variable is : " + vars.get("data"));
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+}
+catch (FileNotFoundException e){
+	System.out.println("File Not Found" + e);	
+}
+catch(java.io.UnsupportedEncodingException ex) {
+     System.out.println("UnsupportedEncodingException" + e);
+ } catch (java.util.zip.DataFormatException ex) {
+     System.out.println("DataFormatException" + e);
+ }
+
+
+
+
+
+
+
+
