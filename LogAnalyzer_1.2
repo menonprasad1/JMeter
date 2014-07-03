@@ -1,0 +1,215 @@
+args=("$@")
+fde=0
+cmd="tail -n +2 "
+if [ $# == 0 ]
+then
+	echo "Need atleast one file as nput"
+	exit 1
+fi
+for ((arg=0;arg<=$#;arg++))
+do
+	if [ ! -f ${args[arg]} ]
+	then
+		echo "File doesn't exist : ${args[arg]}"
+		fde=1
+	fi
+	cmd="$cmd ${args[arg]}"
+done
+if [ $fde == 1 ]
+then
+	exit 1
+fi
+$cmd| awk -F, '
+BEGIN{
+	currentRecord=0;
+	records=0;
+	#percentile90=int(records*0.9);
+	#percentile80=int(records*0.8);
+	#percentile70=int(records*0.7);
+	#percentile60=int(records*0.6);
+	#percentile50=int(records*0.5);
+	#percentile40=int(records*0.4);
+	#percentile30=int(records*0.3);
+	#percentile20=int(records*0.2);
+	#percentile10=int(records*0.1);
+	per10value=0
+	per20value=0
+	per30value=0
+	per40value=0
+	per50value=0
+	per60value=0
+	per70value=0
+	per80value=0
+	per90value=0
+	per100value=0
+	successhttp=0;
+	failhttp=0;
+	distribution20=0;
+	distribution40=0;
+	distribution60=0;
+	distribution80=0;
+	distribution100=0;
+	distribution120=0;
+	distribution140=0;
+	distribution160=0;
+	distribution180=0;
+	distribution200=0;
+	distribution220=0;
+	distribution240=0;
+	processed=0
+	firstTime=1;
+	totalResponseTime=0;
+	firstAssignment=1;
+	maxResponseTime=0
+}
+{
+	if(!isNum($1))next
+	records+=1
+	if(maxResponseTime<$2){if(isNum($2))maxResponseTime=$2}
+	responseTime[$2]++;
+	threads[$6]++;
+	currentRecord+=1;
+	if(currentRecord % 1000000 == 0){
+		if(firstTime != 1){
+			for(i=0;i<length(processed);i++){printf "\b";}
+		}
+		if(firstTime == 1){printf "Processed : "}
+		processed =  ((currentRecord/1000000)) " Million Records";
+		printf processed;
+		firstTime = 0;
+	}
+	if(firstAssignment==1){if(isNum($1)){startTime=$1;endTime=$1;firstAssignment=0}}
+	if(startTime>$1){if(isNum($1)){startTime=$1}};
+	if(endTime<$1){if(isNum($1)){endTime=$1}};
+	if($8=="true")success+=1;
+	if($8=="false")failure+=1;
+	if($4=="200") successhttp+=1;
+	if($4!="200")failhttp+=1;
+	if($2>0 && $2<=20) distribution20+=1;
+	if($2>20 && $2<=40) distribution40+=1;
+	if($2>40 && $2<=60) distribution60+=1;
+	if($2>60 && $2<=80) distribution80+=1;
+	if($2>80 && $2<=100) distribution100+=1;
+	if($2>100 && $2<=120) distribution120+=1;
+	if($2>120 && $2<=140) distribution140+=1;
+	if($2>140 && $2<=160) distribution160+=1;
+	if($2>160 && $2<=180) distribution180+=1;
+	if($2>180 && $2<=200) distribution200+=1;
+	if($2>200 && $2<=220) distribution220+=1;
+	if($2>220 && $2<=240) distribution240+=1;
+	if($2>240) above240+=1;
+	#if(currentRecord==percentile10) per10value=$2;	
+	#if(currentRecord==percentile20) per20value=$2;	
+	#if(currentRecord==percentile30) per30value=$2;	
+	#if(currentRecord==percentile40) per40value=$2;	
+	#if(currentRecord==percentile50) per50value=$2;	
+	#if(currentRecord==percentile60) per60value=$2;	
+	#if(currentRecord==percentile70) per70value=$2;	
+	#if(currentRecord==percentile80) per80value=$2;	
+	#if(currentRecord==percentile90) per90value=$2;	
+	#if(currentRecord==records) per100value=$2;
+	totalResponseTime+=$2;
+}
+END{
+	print "Total records :" records
+	print "Start Time :" startTime
+	print "End Time :" endTime
+	mod = records * 0.10
+	print "Number of elements in the Response Time Array : " length(responseTime)
+	print "Evaluating Percentile"
+	percentileProcessed = 0 "%"
+	print "Max Response Time : " maxResponseTime
+	printf "Evaluated :" percentileProcessed
+	for (i=0;i<=maxResponseTime;i++){
+		if (i in responseTime){
+			for(iterator=0;iterator<length(percentileProcessed);iterator++){printf "\b";}
+			percentileProcessed = int((i/maxResponseTime)*100) "%"
+			printf  percentileProcessed
+			perRecords += responseTime[i]
+			if(perRecords >= mod && per10value == 0){per10value=i}
+			if(perRecords >= 2*mod && per20value == 0){per20value=i}
+			if(perRecords >= 3*mod && per30value == 0){per30value=i}
+			if(perRecords >= 4*mod && per40value == 0){per40value=i}
+			if(perRecords >= 5*mod && per50value == 0){per50value=i}
+			if(perRecords >= 6*mod && per60value == 0){per60value=i}
+			if(perRecords >= 7*mod && per70value == 0){per70value=i}
+			if(perRecords >= 8*mod && per80value == 0){per80value=i}
+			if(perRecords >= 9*mod && per90value == 0){per90value=i}
+			if(per100value == 0){per100value=maxResponseTime}
+		}
+	}
+	print "";
+	#####print the header here#####
+	printf "Duration (Minutes)";printf ",";
+	printf "Sample Size";printf ",";
+	printf "Number Of Threads";printf ",";
+	printf "Success Percentage";printf ",";
+	printf "Failure Percentage";printf ",";
+	printf "200 OK Percentage";printf ",";
+	printf "Non 200 HTTP Percentage";printf ",";
+	printf "Throughput";printf ",";
+	printf "Average Response TIme";printf ",";
+	printf "10Th Percentile";printf ",";
+	printf "20Th Percentile";printf ",";
+	printf "30Th Percentile";printf ",";
+	printf "40Th Percentile";printf ",";
+	printf "50Th Percentile";printf ",";
+	printf "60Th Percentile";printf ",";
+	printf "70Th Percentile";printf ",";
+	printf "80Th Percentile";printf ",";
+	printf "90Th Percentile";printf ",";
+	printf "100Th Percentile";printf ",";
+	printf "0-20";printf ",";
+	printf "20-40";printf ",";
+	printf "40-60";printf ",";
+	printf "60-80";printf ",";
+	printf "80-100";printf ",";
+	printf "100-120";printf ",";
+	printf "120-140";printf ",";
+	printf "140-160";printf ",";
+	printf "160-180";printf ",";
+	printf "180-200";printf ",";
+	printf "200-220";printf ",";
+	printf "220-240";printf ",";
+	printf "240-";
+	#################################
+	print "";
+	printf int((endTime-startTime)/60000);printf ",";
+	printf records;printf ",";
+	printf length(threads);printf ",";
+	printf (success/records)*100;printf ",";
+	printf (failure/records)*100;printf ",";
+	printf (successhttp/records)*100;printf ",";
+	printf (failhttp/records)*100;printf ",";
+	printf (records/((endTime-startTime)/1000));printf ",";
+	printf (totalResponseTime/records);printf ",";
+	printf per10value;printf ",";
+	printf per20value;printf ",";
+	printf per30value;printf ",";
+	printf per40value;printf ",";
+	printf per50value;printf ",";
+	printf per60value;printf ",";
+	printf per70value;printf ",";
+	printf per80value;printf ",";
+	printf per90value;printf ",";
+	printf per100value;printf ",";
+	printf (distribution20/records)*100;printf ",";
+	printf (distribution40/records)*100;printf ",";
+	printf (distribution60/records)*100;printf ",";
+	printf (distribution80/records)*100;printf ",";
+	printf (distribution100/records)*100;printf ",";
+	printf (distribution120/records)*100;printf ",";
+	printf (distribution140/records)*100;printf ",";
+	printf (distribution160/records)*100;printf ",";
+	printf (distribution180/records)*100;printf ",";
+	printf (distribution200/records)*100;printf ",";
+	printf (distribution220/records)*100;printf ",";
+	printf (distribution240/records)*100;printf ",";
+	printf (above240/records)*100;
+	print " "
+
+}
+function isNum(x){
+	return(x==(x+0))
+}
+'
