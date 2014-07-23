@@ -1,0 +1,80 @@
+import java.util.Date;
+import java.util.zip.*;
+import java.io.*;
+import java.lang.*;
+
+//http://www.unicode.org/charts/
+//CJK Radicals Supplement : 2E80 - 2EFF (11904 - 12031) ---------
+//Ideographic descriptopn characters : 2FF0 - 2FFF (12272 - 12287) ---------
+//CJK Strokes : 31C0 - 31EF (12736 - 12783) ---------
+//CJK Compatibility (3300–33FF) (13056 - 13311) ---------
+//CJK Extension A : 3400 - 4DBF (13312 - 19903 ) 6582 characters ---------
+//CJK Unified Ideographs : 4E00 – 9FFF (19968 - 40959) 20902 characters ---------
+//CJK Compatibility Ideographs (F900–FAFF) (63744 - 64255) ---------
+//CJK Compatibility Forms (FE30–FE4F) (65072 - 65103) ---------
+		//----------------------------------------------------------------------3 Bytes ends here
+		//----------------------------------------------------------------------BMP ENDS HERE
+//CJK Extension B : 20000 - 2A6DF (131072 - 173791) (4 Bytes) SMP 42711 characters ---------
+//CJK Extension C : 2A700 - 2B73F (173824 - 177983) (4 Bytes) SMP 4149 characters ---------
+//CJK Extension D : 2B740 - 2B81F (177984 - 178207) (4 Bytes) SMP 222 characters ---------
+//CJK Compatibility ideographs Supplement : 2F800 - 2FA1F (194560 - 195103) ---------
+		
+
+try{
+		BIGGEST_REPRESENTABLE_CODEPOINT = 0x10fff; //this is the hex for the numeric 1114111 i.e. the codePoints in unicode
+		//Scanner input = new Scanner(System.in);
+		//System.out.println("Enter in decimal code point : ");
+		//String codePointStr = input.nextLine();
+		//int codePoint=Integer.parseInt(codePointStr);
+		for(i=1;i<195103;i++){
+			int codePoint=i;
+			boolean isValidcp;
+			isValidcp = Character.isValidCodePoint(codePoint);
+			String s = new String(Integer.toHexString(codePoint));
+			FileOutputStream fos = new FileOutputStream("Hello_UTF8.txt", true);
+			PrintStream out = new PrintStream(fos,true,"UTF-8");
+			//PrintStream out = new PrintStream("Hello.txt","UTF-16");
+			System.setOut(out);
+			if ( codePoint <= 0xffff ) //Characters from 0x"0000 to 0xFFFF are part of the BMP i.e. 65536 characters
+			{
+				if ((Character.isDefined(codePoint)==true) && ((codePoint>=0x2e80 && codePoint<=0x2eff) || (codePoint>=0x2ff0 && codePoint<=0x2fff) || (codePoint>=0x31C0 && codePoint<=0x31EF) || (codePoint>=0x3300 && codePoint<=0x33FF) || (codePoint>=0x3400 && codePoint<=0x4DBF) || (codePoint>=0x4E00 && codePoint<=0x9FFF) || (codePoint>=0xF900 && codePoint<=0xFAFF) || (codePoint>=0xFE30 && codePoint<=0xFE4F)))
+				{
+					char[] ch = Character.toChars(codePoint); // This will store into the char[] UTF-16 representation of the codePoint
+					//System.out.println("CodePoint: "+ codePoint + " Length: " + ch.length + " Charcter in HEX: 0x" + s + " Character: " + new String(ch));
+					System.out.println("CodePoint: "+ codePoint + " Is defined: " + Character.isDefined(codePoint) + " Is Valid: " + isValidcp + " Character: " + new String(ch));
+				}
+			}
+			else{
+				if ((Character.isDefined(codePoint)==true) && ((codePoint>=0x20000 && codePoint<=0x2A6DF) || (codePoint>=0x2A700 && codePoint<=0x2B73F) || (codePoint>=0x2B740 && codePoint<=0x2B81F) || (codePoint>=0x2F800 && codePoint<=0x2FA1F)))
+				{	
+					StringBuilder sb = new StringBuilder();
+					final int extract = codePoint - 0x10000;
+					// strip out the high 10 bits and embed in high surrogate range.
+					final int high = ( extract >>> 10 ) + 0xd800;
+					// strip out the lowe 10 bits and embd in low  surrogate range.
+					final int low = ( extract & 0x3ff ) + 0xdc00;
+					// emit the surrogate pair in big endian order.
+					sb.append( ( char ) high );
+					sb.append( ( char ) low );
+					System.out.println("CodePoint: "+ codePoint + " Is defined: " + Character.isDefined(codePoint) + " Is Valid: " + isValidcp + " Character: " + new String(sb));
+				}
+			}
+		}
+}
+
+catch (FileNotFoundException e){
+	System.out.println("File Not Found" + e);	
+}
+catch(java.io.UnsupportedEncodingException ex) {
+     System.out.println("UnsupportedEncodingException" + e);
+ } catch (java.util.zip.DataFormatException ex) {
+     System.out.println("DataFormatException" + e);
+}
+
+
+
+
+
+
+
+
